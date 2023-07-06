@@ -1,3 +1,7 @@
-from django.shortcuts import render
+from rest_framework import viewsets
+from api import models, serializers
 
-# Create your views here.
+
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = models.Tag.objects.all()
+    serializer_class = serializers.TagSerializer
