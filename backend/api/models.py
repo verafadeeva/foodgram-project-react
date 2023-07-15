@@ -6,7 +6,7 @@ from django.urls import reverse
 
 def user_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
-    return "user_{0}/{1}".format(instance.user.id, filename)
+    return "user_{0}/{1}".format(instance.author.id, filename)
 
 
 class Profile(AbstractUser):
@@ -111,12 +111,12 @@ class Ingredient(models.Model):
 
 class Recipe(models.Model):
     author = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        Profile,
         on_delete=models.CASCADE,
         related_name="recipes",
     )
     name = models.CharField(
-        max_length=100,
+        max_length=200,
     )
     image = models.ImageField(
         upload_to=user_directory_path,
@@ -128,11 +128,9 @@ class Recipe(models.Model):
     )
     tags = models.ManyToManyField(Tag)
     cooking_time = models.IntegerField()
-    is_favorited = models.BooleanField(default=False)
-    is_in_shopping_cart = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'{self.name}: Автор: {self.author.name}'
+        return f'{self.name}: Автор: {self.author.username}'
 
     def get_absolute_url(self):
         return reverse("recipes", kwargs={"pk": self.pk})
