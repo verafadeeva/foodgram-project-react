@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
@@ -24,7 +25,7 @@ class ProfileViewSet(UserViewSet):
             return serializers.ProfileSerializer
         return super().get_serializer_class()
 
-    @action(methods=['get'], detail=False)
+    @action(detail=False, methods=['get'])
     def subscriptions(self, request):
         user = request.user
         queryset = User.objects.filter(followers__user=user)
@@ -82,6 +83,72 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
+    # queryset = models.Recipe.objects.all().select_related(
+    #     'author').prefetch_related('tags', 'ingredients')
     queryset = models.Recipe.objects.all().select_related(
-        'author').prefetch_related('tags', 'ingredients')
+        'author').prefetch_related(
+            'tags',
+            Prefetch('ingredients', queryset=models.Ingredient.objects.annotate())
+        )
     serializer_class = serializers.RecipeSerializer
+
+    def get_serializer_class(self):
+        if self.action in ('favorite', 'shopping_cart'):
+            return serializers.RecipeSimpleSerializer
+        return super().get_serializer_class()
+
+    def get_serializer_context(self):
+        data = super().get_serializer_context()
+        data['queryset'] = self.queryset
+        return data
+
+
+    @action(detail=True, methods=['post', 'delete'])
+    def favorite(self, request, pk=None):
+        user = request.user
+        recipe = get_object_or_404(models.Recipe, id=pk)
+
+        if request.method == 'POST':
+            if recipe in user.favorite_list.all():
+                data = {'errors': 'The recipe is already in your favorites'}
+                return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+            user.favorite_list.add(recipe)
+            serializer = self.get_serializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        elif request.method == 'DELETE':
+            if recipe not in user.favorite_list.all():
+                data = {'errors': "The recipe isn't yet in your favorites"}
+                return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+            user.favorite_list.remove(recipe)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post', 'delete'])
+    def shopping_cart(self, request, pk=None):
+        user = request.user
+        recipe = get_object_or_404(models.Recipe, id=pk)
+
+        if request.method == 'POST':
+            if recipe in user.shopping_list.all():
+                data = {'errors': 'The recipe is in your shopping cart'}
+                return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+            user.shopping_list.add(recipe)
+            serializer = self.get_serializer(recipe)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        elif request.method == 'DELETE':
+            if recipe not in user.shopping_list.all():
+                data = {'errors': "The recipe isn't yet in your shopping cart"}
+                return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+            user.shopping_list.remove(recipe)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['get'])
+    def download_shopping_cart(self, request):
+        user = request.user
+        shopping_list = user.shopping_list.all()
+

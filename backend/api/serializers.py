@@ -2,6 +2,7 @@ import base64
 from time import time
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
 from djoser.serializers import UserSerializer, UserCreateSerializer
 from rest_framework import serializers
@@ -37,21 +38,10 @@ class ProfileCreateSerializer(UserCreateSerializer):
                   'password')
 
 
-class RecipeFieldSerializer(serializers.RelatedField):
-    def to_representation(self, value):
-        data = {
-            'id': value.id,
-            'name': value.name,
-            'image': value.image.url,
-            'cooking_time': value.cooking_time
-        }
-        return data
-
-
 class SubscriptionsSerializer(ProfileSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['recipes'] = RecipeFieldSerializer(
+        self.fields['recipes'] = RecipeSimpleSerializer(
             many=True, read_only=True)
         self.fields['recipes_count'] = serializers.SerializerMethodField()
 
@@ -101,25 +91,33 @@ class IngredientAmountSerializer(IngredientSerializer):
 
 class ImageFieldSerialiser(serializers.ImageField):
     def to_internal_value(self, data):
-        img = base64.b64decode(data)
-        name = f'{int(time())}.jpeg'
-        with open(name, 'wb') as file:
-            file.write(img)
-        return name
+        if isinstance(data, str) and data.startswith('data:image'):
+            format, imgstr = data.split(';base64,')
+            ext = format.split('/')[-1]
+            file_name = f'{int(time())}.{ext}'
+            data = ContentFile(base64.b64decode(imgstr), name=file_name)
+        return super().to_internal_value(data)
 
 
-class RecipeSerializer(serializers.ModelSerializer):
-    author = ProfileSerializer(read_only=True)
-    tags = TagSerializer(many=True)
-    ingredients = IngredientAmountSerializer(many=True)
+class RecipeSimpleSerializer(serializers.ModelSerializer):
     image = ImageFieldSerialiser()
     cooking_time = serializers.IntegerField(min_value=1)
-    is_favorited = serializers.SerializerMethodField(read_only=True)
-    is_in_shopping_cart = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = models.Recipe
-        fields = '__all__'
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
+class RecipeSerializer(RecipeSimpleSerializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['author'] = ProfileSerializer(read_only=True)
+        self.fields['tags'] = TagSerializer(many=True)
+        self.fields['ingredients'] = IngredientAmountSerializer(many=True)
+        self.fields['is_favorited'] = serializers.SerializerMethodField(
+            read_only=True)
+        self.fields['is_in_shopping_cart'] = serializers.SerializerMethodField(
+            read_only=True)
 
     def get_is_favorited(self, obj):
         user = self.context.get('request').user
@@ -144,4 +142,27 @@ class RecipeSerializer(serializers.ModelSerializer):
             amount = data.get('amount')
             instance.ingredients.add(
                 ingredient, through_defaults={"amount": amount})
+        return instance
+
+    def update(self, instance, validated_data):
+        instance.name = validated_data.pop('name', instance.name)
+        instance.image = validated_data.pop('name', instance.image)
+        instance.cooking_time = validated_data.pop('name',
+                                                   instance.cooking_time)
+        tags = validated_data.pop('tags')
+        for tag in tags:
+            if tag in instance.tags.all():
+                instance.tags.remove(tag)
+            else:
+                instance.tags.add(tag)
+        ingredients = validated_data.pop('ingredients')
+        for data in ingredients:
+            ingredient = data.get('ingredient')
+            amount = data.get('amount')
+            if ingredient in instance.ingredients.all():
+                instance.ingredients.remove(
+                    ingredient, through_defaults={"amount": amount})
+            else:
+                instance.ingredients.add(
+                    ingredient, through_defaults={"amount": amount})
         return instance
