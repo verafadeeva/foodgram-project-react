@@ -145,6 +145,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'api.pagination.CustomPagination',
+    'PAGE_SIZE': 10
 }
 
 DJOSER = {
@@ -157,5 +159,7 @@ DJOSER = {
     'HIDE_USERS': False,
     'PERMISSIONS': {
         'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
+        'user_list': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
     }
+
 }
