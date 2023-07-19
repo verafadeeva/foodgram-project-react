@@ -1,20 +1,23 @@
-from django.db.models import Prefetch
+from django.db.models import Sum
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from api import models, serializers
+from api.permissions import IsAuthorOrReadOnly
+from api.filters import RecipeFilterBackend
 
 User = get_user_model()
 
 
 class ProfileViewSet(UserViewSet):
     queryset = User.objects.all().prefetch_related(
-        'following').prefetch_related('followers')
+        'following').prefetch_related('followers').order_by('id')
     allowed_methods = ('post', 'get')
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly, )
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -25,20 +28,30 @@ class ProfileViewSet(UserViewSet):
             return serializers.ProfileSerializer
         return super().get_serializer_class()
 
-    @action(detail=False, methods=['get'])
+    def get_serializer_context(self):
+        data = super().get_serializer_context()
+        default_limit = 5
+        recipes_limit = self.request.query_params.get("recipes_limit",
+                                                      default_limit)
+        data['recipes_limit'] = recipes_limit
+        return data
+
+    @action(detail=False, methods=['get'],
+            permission_classes=[permissions.IsAuthenticated])
     def subscriptions(self, request):
-        user = request.user
-        queryset = User.objects.filter(followers__user=user)
-        # page = self.paginate_queryset(recent_users)
-        # if page is not None:
-        #     serializer = self.get_serializer(page, many=True)
-        #     return self.get_paginated_response(serializer.data)
+        user = self.get_instance()
+        queryset = User.objects.filter(followers__user=user).order_by('id')
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post', 'delete'])
+    @action(detail=True, methods=['post', 'delete'],
+            permission_classes=[permissions.IsAuthenticated])
     def subscribe(self, request, id=None):
-        user = request.user
+        user = self.get_instance()
         id = self.kwargs.get('id')
         following_user = get_object_or_404(User, id=id)
         if request.method == 'POST':
@@ -83,30 +96,21 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    # queryset = models.Recipe.objects.all().select_related(
-    #     'author').prefetch_related('tags', 'ingredients')
     queryset = models.Recipe.objects.all().select_related(
-        'author').prefetch_related(
-            'tags',
-            Prefetch('ingredients', queryset=models.Ingredient.objects.annotate())
-        )
+        'author').prefetch_related('tags', 'ingredients')
     serializer_class = serializers.RecipeSerializer
+    permission_classes = (IsAuthorOrReadOnly, )
+    filter_backends = (RecipeFilterBackend, )
 
     def get_serializer_class(self):
         if self.action in ('favorite', 'shopping_cart'):
             return serializers.RecipeSimpleSerializer
         return super().get_serializer_class()
 
-    def get_serializer_context(self):
-        data = super().get_serializer_context()
-        data['queryset'] = self.queryset
-        return data
-
-
     @action(detail=True, methods=['post', 'delete'])
     def favorite(self, request, pk=None):
         user = request.user
-        recipe = get_object_or_404(models.Recipe, id=pk)
+        recipe = get_object_or_404(models.Recipe, pk=pk)
 
         if request.method == 'POST':
             if recipe in user.favorite_list.all():
@@ -128,7 +132,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post', 'delete'])
     def shopping_cart(self, request, pk=None):
         user = request.user
-        recipe = get_object_or_404(models.Recipe, id=pk)
+        recipe = get_object_or_404(models.Recipe, pk=pk)
 
         if request.method == 'POST':
             if recipe in user.shopping_list.all():
@@ -151,4 +155,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         user = request.user
         shopping_list = user.shopping_list.all()
-
+        queryset = models.Ingredient.objects.filter(
+            ingredientamount__recipe__in=shopping_list
+        ).annotate(total_amount=Sum('ingredientamount__amount'))

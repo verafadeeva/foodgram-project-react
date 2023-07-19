@@ -3,6 +3,7 @@ from time import time
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from djoser.serializers import UserSerializer, UserCreateSerializer
 from rest_framework import serializers
@@ -23,6 +24,8 @@ class ProfileSerializer(UserSerializer):
 
     def get_is_subscribed(self, obj):
         user = self.context.get('request').user
+        if user.is_anonymous:
+            return False
         following = user.following.filter(following_user=obj)
         return True if following else False
 
@@ -41,9 +44,14 @@ class ProfileCreateSerializer(UserCreateSerializer):
 class SubscriptionsSerializer(ProfileSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['recipes'] = RecipeSimpleSerializer(
-            many=True, read_only=True)
+        self.fields['recipes'] = serializers.SerializerMethodField()
         self.fields['recipes_count'] = serializers.SerializerMethodField()
+
+    def get_recipes(self, obj):
+        limit = self.context.get('recipes_limit')
+        recipes = obj.recipes.all()[:int(limit)]
+        serializer = RecipeSimpleSerializer(recipes, many=True)
+        return serializer.data
 
     def get_recipes_count(self, obj):
         count = obj.recipes.all().count()
@@ -72,15 +80,15 @@ class IngredientSerializer(serializers.ModelSerializer):
 class IngredientAmountSerializer(IngredientSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['amount'] = serializers.SerializerMethodField()
+        self.fields['amount'] = serializers.IntegerField()
 
-    def get_amount(self, obj):
-        recipe_id = self.context.get('view').kwargs.get('pk')
-        if recipe_id is None:
-            amount = obj.ingredientamount_set.all()[0].amount
-        else:
-            amount = obj.ingredientamount_set.get(recipe__id=recipe_id).amount
-        return amount
+    # def get_amount(self, obj):
+    #     recipe_id = self.context.get('view').kwargs.get('pk')
+    #     if recipe_id is None:
+    #         amount = obj.ingredientamount_set.all()[0].amount
+    #     else:
+    #         amount = obj.ingredientamount_set.get(recipe__id=recipe_id).amount
+    #     return amount
 
     def to_internal_value(self, data):
         ing_id = data.pop('id')
@@ -113,26 +121,47 @@ class RecipeSerializer(RecipeSimpleSerializer):
         super().__init__(*args, **kwargs)
         self.fields['author'] = ProfileSerializer(read_only=True)
         self.fields['tags'] = TagSerializer(many=True)
-        self.fields['ingredients'] = IngredientAmountSerializer(many=True)
+        # self.fields['ingredients'] = IngredientAmountSerializer(many=True)
+        self.fields['ingredients'] = serializers.SerializerMethodField()
         self.fields['is_favorited'] = serializers.SerializerMethodField(
             read_only=True)
         self.fields['is_in_shopping_cart'] = serializers.SerializerMethodField(
             read_only=True)
 
+    def get_ingredients(self, obj):
+        ingredients = obj.ingredients.annotate(
+            amount=F('ingredientamount__amount'))
+        serializer = IngredientAmountSerializer(ingredients, many=True)
+        return serializer.data
+
     def get_is_favorited(self, obj):
         user = self.context.get('request').user
+        if user.is_anonymous:
+            return False
         favorited_for = obj.favorited_for.all()
         return True if user in favorited_for else False
 
     def get_is_in_shopping_cart(self, obj):
         user = self.context.get('request').user
+        if user.is_anonymous:
+            return False
         added_to_cart = obj.added_to_cart.all()
         return True if user in added_to_cart else False
 
+    def validate_ingredients(self, data):
+        validated_data = []
+        for d in data:
+            serializer = IngredientAmountSerializer(data=d)
+            if not serializer.is_valid():
+                raise serializers.ValidationError('Ingredients field is required')
+            validated_data.append(serializer.validated_data)
+        return validated_data
+
     def create(self, validate_data):
+        initial = self.initial_data.get('ingredients')
+        ingredients = self.validate_ingredients(initial)
         author = self.context.get('request').user
         tags = validate_data.pop('tags')
-        ingredients = validate_data.pop('ingredients')
         instance, _ = models.Recipe.objects.get_or_create(
             author=author, **validate_data
         )

@@ -157,9 +157,8 @@ DJOSER = {
         'user_create': 'api.serializers.ProfileCreateSerializer',
     },
     'HIDE_USERS': False,
-    'PERMISSIONS': {
-        'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
-        'user_list': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
-    }
+    # 'PERMISSIONS': {
+    #     'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
+    # }
 
 }
