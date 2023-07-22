@@ -82,14 +82,6 @@ class IngredientAmountSerializer(IngredientSerializer):
         super().__init__(*args, **kwargs)
         self.fields['amount'] = serializers.IntegerField()
 
-    # def get_amount(self, obj):
-    #     recipe_id = self.context.get('view').kwargs.get('pk')
-    #     if recipe_id is None:
-    #         amount = obj.ingredientamount_set.all()[0].amount
-    #     else:
-    #         amount = obj.ingredientamount_set.get(recipe__id=recipe_id).amount
-    #     return amount
-
     def to_internal_value(self, data):
         ing_id = data.pop('id')
         ingredient = get_object_or_404(models.Ingredient, id=ing_id)
@@ -121,7 +113,6 @@ class RecipeSerializer(RecipeSimpleSerializer):
         super().__init__(*args, **kwargs)
         self.fields['author'] = ProfileSerializer(read_only=True)
         self.fields['tags'] = TagSerializer(many=True)
-        # self.fields['ingredients'] = IngredientAmountSerializer(many=True)
         self.fields['ingredients'] = serializers.SerializerMethodField()
         self.fields['is_favorited'] = serializers.SerializerMethodField(
             read_only=True)
@@ -148,21 +139,19 @@ class RecipeSerializer(RecipeSimpleSerializer):
         added_to_cart = obj.added_to_cart.all()
         return True if user in added_to_cart else False
 
-    def validate_ingredients(self, data):
-        validated_data = []
-        for d in data:
-            serializer = IngredientAmountSerializer(data=d)
-            if not serializer.is_valid():
-                raise serializers.ValidationError('Ingredients field is required')
-            validated_data.append(serializer.validated_data)
-        return validated_data
+    def validate_ingredients(self, value):
+        if not value:
+            raise serializers.ValidationError('Ingredients field is required')
+        serializer = IngredientAmountSerializer(data=value, many=True)
+        if serializer.is_valid(raise_exception=True):
+            return serializer.validated_data
 
     def create(self, validate_data):
-        initial = self.initial_data.get('ingredients')
-        ingredients = self.validate_ingredients(initial)
-        author = self.context.get('request').user
+        initial_ingred = self.initial_data.get('ingredients')
+        ingredients = self.validate_ingredients(initial_ingred)
         tags = validate_data.pop('tags')
-        instance, _ = models.Recipe.objects.get_or_create(
+        author = self.context.get('request').user
+        instance = models.Recipe.objects.create(
             author=author, **validate_data
         )
         instance.tags.add(*tags)
@@ -178,20 +167,23 @@ class RecipeSerializer(RecipeSimpleSerializer):
         instance.image = validated_data.pop('name', instance.image)
         instance.cooking_time = validated_data.pop('name',
                                                    instance.cooking_time)
-        tags = validated_data.pop('tags')
+        tags = validated_data.get('tags', [])
         for tag in tags:
             if tag in instance.tags.all():
                 instance.tags.remove(tag)
             else:
                 instance.tags.add(tag)
-        ingredients = validated_data.pop('ingredients')
-        for data in ingredients:
-            ingredient = data.get('ingredient')
-            amount = data.get('amount')
-            if ingredient in instance.ingredients.all():
-                instance.ingredients.remove(
-                    ingredient, through_defaults={"amount": amount})
-            else:
-                instance.ingredients.add(
-                    ingredient, through_defaults={"amount": amount})
+        if 'ingredients' in self.initial_data:
+            ingredients = self.validate_ingredients(
+                self.initial_data.get('ingredients')
+            )
+            for data in ingredients:
+                ingredient = data.get('ingredient')
+                amount = data.get('amount')
+                if ingredient in instance.ingredients.all():
+                    instance.ingredients.remove(
+                        ingredient, through_defaults={"amount": amount})
+                else:
+                    instance.ingredients.add(
+                        ingredient, through_defaults={"amount": amount})
         return instance

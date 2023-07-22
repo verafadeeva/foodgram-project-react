@@ -1,6 +1,7 @@
 from django.db.models import Sum
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from djoser.conf import settings
 from djoser.views import UserViewSet
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
@@ -9,6 +10,7 @@ from rest_framework.response import Response
 from api import models, serializers
 from api.permissions import IsAuthorOrReadOnly
 from api.filters import RecipeFilterBackend
+from api.utils import create_txt
 
 User = get_user_model()
 
@@ -17,7 +19,12 @@ class ProfileViewSet(UserViewSet):
     queryset = User.objects.all().prefetch_related(
         'following').prefetch_related('followers').order_by('id')
     allowed_methods = ('post', 'get')
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly, )
+    permission_classes = settings.PERMISSIONS.user
+
+    def get_permissions(self):
+        if self.action == 'retrieve':
+            self.permission_classes = settings.PERMISSIONS.retrieve
+        return super().get_permissions()
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -158,3 +165,4 @@ class RecipeViewSet(viewsets.ModelViewSet):
         queryset = models.Ingredient.objects.filter(
             ingredientamount__recipe__in=shopping_list
         ).annotate(total_amount=Sum('ingredientamount__amount'))
+        return create_txt(queryset)

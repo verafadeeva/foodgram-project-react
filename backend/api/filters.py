@@ -7,8 +7,6 @@ class RecipeFilterBackend(filters.BaseFilterBackend):
         query = request.query_params
         tags = query.getlist('tags')
         author = query.get('author')
-        is_favorited = query.get('is_favorited')
-        is_in_shopping_cart = query.get('is_in_shopping_cart')
         if tags:
             if len(tags) == 1:
                 queryset = queryset.filter(tags__slug=tags[0])
@@ -19,8 +17,11 @@ class RecipeFilterBackend(filters.BaseFilterBackend):
                             )
         elif author is not None:
             queryset = queryset.filter(author__id=int(author))
-        elif is_favorited == '1':
-            queryset = user.favorite_list.all()
-        elif is_in_shopping_cart == '1':
-            queryset = user.shopping_list.all()
+        if not user.is_anonymous:
+            is_favorited = query.get('is_favorited')
+            is_in_shopping_cart = query.get('is_in_shopping_cart')
+            if is_favorited == '1':
+                queryset = user.favorite_list.all()
+            elif is_in_shopping_cart == '1':
+                queryset = user.shopping_list.all()
         return queryset

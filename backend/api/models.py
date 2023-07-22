@@ -5,16 +5,10 @@ from django.urls import reverse
 
 
 def user_directory_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
     return "user_{0}/{1}".format(instance.author.id, filename)
 
 
 class Profile(AbstractUser):
-    role = models.ForeignKey(
-        "RoleUser",
-        on_delete=models.CASCADE,
-        default=1,
-    )
     favorite_list = models.ManyToManyField(
         'Recipe',
         related_name='favorited_for',
@@ -31,16 +25,6 @@ class Profile(AbstractUser):
 
     def get_absolute_url(self):
         return reverse("profile", kwargs={"pk": self.pk})
-
-
-class RoleUser(models.Model):
-    name = models.CharField(
-        max_length=100,
-        unique=True,
-    )
-
-    def __str__(self):
-        return f'{self.name}'
 
 
 class UserFollowing(models.Model):
@@ -103,7 +87,7 @@ class Ingredient(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.name}'
+        return f'{self.name}, {self.measurement_unit}'
 
     def get_absolute_url(self):
         return reverse("ingredients", kwargs={"pk": self.pk})
