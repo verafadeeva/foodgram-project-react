@@ -11,8 +11,8 @@ class RecipeFilterBackend(filters.BaseFilterBackend):
             if len(tags) == 1:
                 queryset = queryset.filter(tags__slug=tags[0])
             elif len(tags) == 2:
-                queryset = (queryset.filter(tags__slug=tags[0]) |
-                            queryset.filter(tags__slug=tags[1]).exclude(
+                queryset = (queryset.filter(tags__slug=tags[0])
+                            | queryset.filter(tags__slug=tags[1]).exclude(
                                 tags__slug=tags[0])
                             )
         elif author is not None:
