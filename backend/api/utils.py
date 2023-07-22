@@ -18,6 +18,6 @@ def create_txt(queryset):
         'Content-Type: application/pdf',
         headers={
             "Content-Disposition": 'attachment; filename="shopping_list.txt"'
-                }
-            )
+        }
+    )
     return response
