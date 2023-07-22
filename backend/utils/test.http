@@ -4,7 +4,7 @@ content-type: application/json
 Authorization: token 9a35ccc5571cabcb8fcb82579b09665e4df9fe64
 
 ###
-GET http://localhost:8000/api/tags/1/ HTTP/1.1
+GET http://localhost:8000/api/tags/2/ HTTP/1.1
 content-type: application/json
 Authorization: token 9a35ccc5571cabcb8fcb82579b09665e4df9fe64
 
@@ -14,10 +14,13 @@ content-type: application/json
 Authorization: token 9a35ccc5571cabcb8fcb82579b09665e4df9fe64
 
 ###
-GET http://localhost:8000/api/users/subscriptions/ HTTP/1.1
+GET http://localhost:8000/api/users/subscriptions/
+?page=3
+&limit=1
+&recipes_limit=1
 content-type: application/json
-Authorization: token 9a35ccc5571cabcb8fcb82579b09665e4df9fe64
-# Vera
+Authorization: token 0678db8e224dca7d206505c4ae5d9e0512484f18
+# Катя
 
 ###
 POST http://localhost:8000/api/users/5/subscribe/
@@ -32,14 +35,14 @@ Authorization: token 4536c1c1fb37a33470542c02c2b7ff51933a3bd4
 
 ###
 GET http://localhost:8000/api/users/
-?page=3
+?page=2
 &limit=2
 content-type: application/json
 Authorization: token 9a35ccc5571cabcb8fcb82579b09665e4df9fe64
 # Vera
 
 ###
-GET http://localhost:8000/api/users/2/ HTTP/1.1
+GET http://localhost:8000/api/users/3/ HTTP/1.1
 content-type: application/json
 Authorization: token 9a35ccc5571cabcb8fcb82579b09665e4df9fe64
 
@@ -80,18 +83,24 @@ content-type: application/json
 Authorization: token 9a35ccc5571cabcb8fcb82579b09665e4df9fe64
 
 {
-    "new_password": "mNtre32857",
-    "current_password": "MnTrE328"
+    "new_password": "deathclaw321",
+    "current_password": "mNtre32857"
 }
 
 ###
-GET http://localhost:8000/api/recipes/ HTTP/1.1
+GET http://localhost:8000/api/recipes/
+?page=1
+&limit=2
+&is_in_shopping_cart=1
+# &is_favorited=1
+# &author=4
+# &tags=dinner
 content-type: application/json
-Authorization: token 9a35ccc5571cabcb8fcb82579b09665e4df9fe64
-# Vera
+Authorization: token ebdbaa8f67fd3317779cc793a83db4e0585e0844
+# iro4ka
 
 ###
-GET http://localhost:8000/api/recipes/4/ HTTP/1.1
+GET http://localhost:8000/api/recipes/2/ HTTP/1.1
 content-type: application/json
 Authorization: token ebdbaa8f67fd3317779cc793a83db4e0585e0844
 # iro4ka
@@ -109,7 +118,35 @@ Authorization: token ebdbaa8f67fd3317779cc793a83db4e0585e0844
 # iro4ka
 
 ###
-POST http://localhost:8000/api/recipes/4/shopping_cart/ HTTP/1.1
+POST http://localhost:8000/api/recipes/1/shopping_cart/ HTTP/1.1
+content-type: application/json
+Authorization: token ebdbaa8f67fd3317779cc793a83db4e0585e0844
+# iro4ka
+
+###
+GET http://localhost/api/recipes/download_shopping_cart/ HTTP/1.1
+content-type: application/json
+Authorization: token ebdbaa8f67fd3317779cc793a83db4e0585e0844
+# iro4ka
+
+###
+PATCH http://localhost:8000/api/recipes/4/ HTTP/1.1
+content-type: application/json
+Authorization: token 4536c1c1fb37a33470542c02c2b7ff51933a3bd4
+# Dad
+
+{
+    "name": "Шашлычок",
+    "ingredients": [
+        {
+            "id": 812,
+            "amount": 200
+        }
+    ]
+}
+
+###
+DELETE http://localhost:8000/api/recipes/3/ HTTP/1.1
 content-type: application/json
 Authorization: token 4536c1c1fb37a33470542c02c2b7ff51933a3bd4
 # Dad
