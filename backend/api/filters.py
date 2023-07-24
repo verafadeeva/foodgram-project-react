@@ -1,27 +1,29 @@
-from rest_framework import filters
+from django_filters import rest_framework as filters
+from api import models
 
 
-class RecipeFilterBackend(filters.BaseFilterBackend):
-    def filter_queryset(self, request, queryset, view):
-        user = request.user
-        query = request.query_params
-        tags = query.getlist('tags')
-        author = query.get('author')
-        if tags:
-            if len(tags) == 1:
-                queryset = queryset.filter(tags__slug=tags[0])
-            elif len(tags) == 2:
-                queryset = (queryset.filter(tags__slug=tags[0])
-                            | queryset.filter(tags__slug=tags[1]).exclude(
-                                tags__slug=tags[0])
-                            )
-        elif author is not None:
-            queryset = queryset.filter(author__id=int(author))
-        if not user.is_anonymous:
-            is_favorited = query.get('is_favorited')
-            is_in_shopping_cart = query.get('is_in_shopping_cart')
-            if is_favorited == '1':
-                queryset = user.favorite_list.all()
-            elif is_in_shopping_cart == '1':
-                queryset = user.shopping_list.all()
+class RecipeFilter(filters.FilterSet):
+    author__id = filters.NumberFilter()
+    tags = filters.ModelMultipleChoiceFilter(
+        field_name='tags__slug',
+        to_field_name='slug',
+        queryset=models.Tag.objects.all()
+    )
+    is_favorited = filters.BooleanFilter(method='get_is_favorited')
+    is_in_shopping_cart = filters.BooleanFilter(
+        method='get_is_in_shopping_cart'
+    )
+
+    class Meta:
+        model = models.Recipe
+        fields = ['author', 'tags']
+
+    def get_is_favorited(self, queryset, name, value):
+        if value and not self.request.user.is_anonymous:
+            return self.request.user.favorite_list.all()
+        return queryset
+
+    def get_is_in_shopping_cart(self, queryset, name, value):
+        if value and not self.request.user.is_anonymous:
+            return self.request.user.shopping_list.all()
         return queryset

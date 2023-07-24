@@ -1,6 +1,7 @@
 from django.db.models import Sum
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from django_filters import rest_framework
 from djoser.conf import settings
 from djoser.views import UserViewSet
 from rest_framework import filters, permissions, status, viewsets
@@ -9,7 +10,7 @@ from rest_framework.response import Response
 
 from api import models, serializers
 from api.permissions import IsAuthorOrReadOnly
-from api.filters import RecipeFilterBackend
+from api.filters import RecipeFilter
 from api.utils import create_txt
 
 User = get_user_model()
@@ -107,7 +108,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         'author').prefetch_related('tags', 'ingredients')
     serializer_class = serializers.RecipeSerializer
     permission_classes = (IsAuthorOrReadOnly, )
-    filter_backends = (RecipeFilterBackend, )
+    filter_backends = (rest_framework.DjangoFilterBackend, )
+    filterset_class = RecipeFilter
 
     def get_serializer_class(self):
         if self.action in ('favorite', 'shopping_cart'):
