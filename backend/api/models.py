@@ -1,5 +1,4 @@
 from django.db import models
-from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.urls import reverse
 
@@ -29,12 +28,12 @@ class Profile(AbstractUser):
 
 class UserFollowing(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        Profile,
         on_delete=models.CASCADE,
         related_name="following",
     )
     following_user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        Profile,
         on_delete=models.CASCADE,
         related_name="followers",
     )
