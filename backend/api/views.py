@@ -66,9 +66,9 @@ class ProfileViewSet(UserViewSet):
         following_user = get_object_or_404(User, id=id)
         if request.method == 'DELETE':
             instance = models.UserFollowing.objects.filter(
-                    user=user,
-                    following_user=following_user
-                )
+                user=user,
+                following_user=following_user,
+            )
             if instance.exists():
                 instance.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
