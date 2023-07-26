@@ -1,7 +1,6 @@
 import csv
 from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
-from django.db.utils import IntegrityError
 
 from api.models import Ingredient
 
@@ -22,10 +21,7 @@ class Command(BaseCommand):
                 for row in reader:
                     obj = Ingredient(name=row[0], measurement_unit=row[1])
                     ingredients.append(obj)
-                try:
-                    Ingredient.objects.bulk_create(ingredients)
-                    self.stdout.write('Data loaded successfully')
-                except IntegrityError:
-                    self.stdout.write(f'"{obj.name}" exist')
+                Ingredient.objects.bulk_create(ingredients)
+                self.stdout.write('Data loaded successfully')
         except FileNotFoundError:
             raise CommandError('File not found')

@@ -1,7 +1,6 @@
 import csv
 from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
-from django.db.utils import IntegrityError
 
 from api.models import Tag
 
@@ -22,10 +21,7 @@ class Command(BaseCommand):
                 for row in reader:
                     tag = Tag(name=row[0], color=row[1], slug=row[2])
                     tags.append(tag)
-                try:
-                    Tag.objects.bulk_create(tags)
-                    self.stdout.write('Data loaded successfully')
-                except IntegrityError:
-                    self.stdout.write(f'"{tag.name}" exist')
+                Tag.objects.bulk_create(tags)
+                self.stdout.write('Data loaded successfully')
         except FileNotFoundError:
             raise CommandError('File not found')
