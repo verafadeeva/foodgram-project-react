@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 
 from django.db.models import F
 from django.shortcuts import get_object_or_404
+from djoser.conf import settings
 from djoser.serializers import UserSerializer, UserCreateSerializer
 from rest_framework import serializers, validators
 
@@ -49,7 +50,7 @@ class SubscriptionsSerializer(ProfileSerializer):
                   'is_subscribed', 'recipes', 'recipes_count')
 
     def get_recipes(self, obj):
-        limit = self.context.get('recipes_limit')
+        limit = self.context.get('recipes_limit', settings.RECIPES_LIMIT)
         recipes = obj.recipes.all()[:int(limit)]
         serializer = RecipeSimpleSerializer(recipes, many=True)
         return serializer.data
