@@ -8,15 +8,14 @@ volumes:
 services:
   db:
     image: postgres:13.10
-    env_file: .env
+    env_file: ../.env
     volumes:
       - pg_data:/var/lib/postgresql/data
 
   backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-    env_file: .env
+    image: lunaatik/foodgram_backend:first
+    restart: always
+    env_file: ../.env
     depends_on:
       - db
     volumes:
@@ -25,9 +24,7 @@ services:
       - ../data/:/app/data/
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: lunaatik/foodgram_frontend:first
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:
