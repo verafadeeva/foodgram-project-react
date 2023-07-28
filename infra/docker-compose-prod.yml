@@ -21,7 +21,6 @@ services:
     volumes:
       - static:/backend_static
       - media:/backend_media
-      - ../data/:/app/data/
 
   frontend:
     image: lunaatik/foodgram_frontend:first
