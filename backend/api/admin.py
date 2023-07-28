@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 
 from api import models
 
-
 User = get_user_model()
 
 
