@@ -11,12 +11,14 @@ djangorestframework==3.14.0
 djangorestframework-simplejwt==5.2.2
 djoser==2.2.0
 exceptiongroup==1.1.2
+gunicorn==20.1.0
 idna==3.4
 iniconfig==2.0.0
 oauthlib==3.2.2
 packaging==23.1
 Pillow==10.0.0
 pluggy==1.2.0
+psycopg2-binary==2.9.3
 pycparser==2.21
 PyJWT==2.7.0
 pytest==7.4.0

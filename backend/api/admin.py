@@ -40,7 +40,8 @@ class IngredientAmountAdmin(admin.ModelAdmin):
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('author', 'name')
     list_filter = ('author', 'name', 'tags')
-    fields = ('author', 'name', 'image', 'cooking_time', 'tags', 'favorite')
+    fields = ('author', 'name', 'image', 'cooking_time', 'tags', 'favorite',
+              'text')
     readonly_fields = ('favorite', )
 
     def favorite(self, obj):

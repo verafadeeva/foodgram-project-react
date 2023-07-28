@@ -50,7 +50,7 @@ class SubscriptionsSerializer(ProfileSerializer):
                   'is_subscribed', 'recipes', 'recipes_count')
 
     def get_recipes(self, obj):
-        limit = self.context.get('recipes_limit', settings.RECIPES_LIMIT)
+        limit = self.context.get('recipes_limit', settings.LIMIT_RECIPES)
         recipes = obj.recipes.all()[:int(limit)]
         serializer = RecipeSimpleSerializer(recipes, many=True)
         return serializer.data
@@ -138,8 +138,8 @@ class RecipeSerializer(RecipeSimpleSerializer):
 
     class Meta:
         model = models.Recipe
-        fields = ('id', 'name', 'image', 'cooking_time', 'author', 'tags',
-                  'ingredients', 'is_favorited', 'is_in_shopping_cart')
+        fields = ('id', 'name', 'image', 'cooking_time', 'author', 'text',
+                  'tags', 'ingredients', 'is_favorited', 'is_in_shopping_cart')
 
     def get_ingredients(self, obj):
         ingredients = obj.ingredients.annotate(
@@ -187,25 +187,24 @@ class RecipeSerializer(RecipeSimpleSerializer):
         instance.image = validated_data.pop('name', instance.image)
         instance.cooking_time = validated_data.pop('name',
                                                    instance.cooking_time)
+        instance.text = validated_data.pop('text', instance.text)
         tags = validated_data.get('tags', [])
-        for tag in tags:
-            if tag in instance.tags.all():
-                instance.tags.remove(tag)
-            else:
-                instance.tags.add(tag)
+        instance.tags.set(tags)
         if 'ingredients' in self.initial_data:
             ingredients = self.validate_ingredients(
                 self.initial_data.get('ingredients')
             )
+            ingr = []
             for data in ingredients:
                 ingredient = data.get('ingredient')
+                ingr.append(ingredient)
                 amount = data.get('amount')
-                if ingredient in instance.ingredients.all():
-                    instance.ingredients.remove(
-                        ingredient, through_defaults={"amount": amount})
-                else:
-                    instance.ingredients.add(
-                        ingredient, through_defaults={"amount": amount})
+                models.IngredientAmount.objects.update_or_create(
+                    ingredient=ingredient,
+                    recipe=instance,
+                    amount=amount
+                )
+            instance.ingredients.set(ingr)
         return instance
 
 
