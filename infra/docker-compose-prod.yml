@@ -30,11 +30,10 @@ services:
       - db
 
   nginx:
-    image: nginx:1.19.3
+    image: lunaatik/infra:first
     ports:
       - "8080:80"
     volumes:
-      - ./default.conf:/etc/nginx/conf.d
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
       - static:/var/html/static/
