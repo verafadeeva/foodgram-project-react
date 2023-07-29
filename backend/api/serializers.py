@@ -184,8 +184,8 @@ class RecipeSerializer(RecipeSimpleSerializer):
 
     def update(self, instance, validated_data):
         instance.name = validated_data.pop('name', instance.name)
-        instance.image = validated_data.pop('name', instance.image)
-        instance.cooking_time = validated_data.pop('name',
+        instance.image = validated_data.pop('image', instance.image)
+        instance.cooking_time = validated_data.pop('cooking_time',
                                                    instance.cooking_time)
         instance.text = validated_data.pop('text', instance.text)
         tags = validated_data.get('tags', [])
