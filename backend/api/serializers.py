@@ -205,6 +205,7 @@ class RecipeSerializer(RecipeSimpleSerializer):
                     amount=amount
                 )
             instance.ingredients.set(ingr)
+        instance.save()
         return instance
 
 
